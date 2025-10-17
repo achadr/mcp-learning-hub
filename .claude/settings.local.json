@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(if exist \"C:\\Users\\achra\\Desktop\\My-projects\\mcp-hub\\src\\index.ts\" move \"C:\\Users\\achra\\Desktop\\My-projects\\mcp-hub\\src\\index.ts\" \"C:\\Users\\achra\\Desktop\\My-projects\\mcp-hub\\src\\mcp-server.ts\")",
+      "Bash(unzip:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(npm install:*)",
+      "Bash(for file in *.tsx ui/*.tsx)",
+      "Bash(do [ -f \"$file\" ])",
+      "Bash(mv \"$file\" \"$file%.tsx.jsx\")",
+      "Bash(done)",
+      "Bash(npm run dev:*)",
+      "Bash(find:*)",
+      "Bash(xargs:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "mcp-musician-lookup",
+  "version": "1.0.0",
+  "description": "MCP server for looking up musician performances by location",
+  "type": "module",
+  "main": "build/mcp-server.js",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "watch": "tsc --watch",
+    "start:mcp": "node build/mcp-server.js",
+    "start:http": "node build/http-server.js",
+    "dev:http": "tsc && node build/http-server.js"
+  },
+  "keywords": ["mcp", "musician", "concerts", "performances"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "express": "^4.21.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.17",
+    "typescript": "^5.7.2"
+  }
+}
