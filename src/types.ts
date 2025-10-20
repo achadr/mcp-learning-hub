@@ -19,6 +19,7 @@ export interface PerformanceResult {
   events: PerformanceEvent[];
   sources: SourceLink[];
   message?: string;
+  artistImage?: string;
 }
 
 export interface SourceLink {

@@ -30,6 +30,16 @@ export const config = {
   server: {
     httpPort: parseInt(process.env.PORT || '3000', 10),
   },
+  images: {
+    provider: (process.env.IMAGE_PROVIDER || 'musicbrainz') as 'musicbrainz' | 'lastfm' | 'spotify' | 'multi',
+    lastfm: {
+      apiKey: process.env.LASTFM_API_KEY || '',
+    },
+    spotify: {
+      clientId: process.env.SPOTIFY_CLIENT_ID || '',
+      clientSecret: process.env.SPOTIFY_CLIENT_SECRET || '',
+    },
+  },
 };
 
 export function validateConfig(): { valid: boolean; missing: string[] } {

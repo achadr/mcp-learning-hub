@@ -8,6 +8,8 @@ import { searchTicketmaster } from './ticketmaster.js';
 import { searchWikipedia } from './wikipedia.js';
 import { searchNews } from './news.js';
 import { searchMusicBrainz } from './musicbrainz.js';
+import { getArtistImage } from './artistImageProvider.js';
+import { config } from '../config.js';
 import type { PerformanceEvent, PerformanceResult, SearchParams, SourceLink } from '../types.js';
 
 // Country name to ISO code mapping
@@ -94,14 +96,15 @@ export async function aggregatePerformanceData(
     country: normalizedCountry,
   };
 
-  // Call all services in parallel
-  const [setlistfmResult, songkickResult, ticketmasterResult, musicbrainzResult, wikipediaResult, newsResult] = await Promise.all([
+  // Call all services in parallel (including artist image)
+  const [setlistfmResult, songkickResult, ticketmasterResult, musicbrainzResult, wikipediaResult, newsResult, artistImage] = await Promise.all([
     searchSetlistFm(normalizedParams),
     searchSongkick(normalizedParams),
     searchTicketmaster(normalizedParams),
     searchMusicBrainz(normalizedParams),
     searchWikipedia(params), // Use original for Wikipedia (better for search)
     searchNews(params), // Use original for News (better for search)
+    getArtistImage(params.artist, config.images.provider), // Fetch artist image with configured provider
   ]);
 
   // Combine events from music databases
@@ -170,6 +173,7 @@ export async function aggregatePerformanceData(
     events: uniqueEvents,
     sources: allSources.slice(0, 10), // Limit to top 10 sources
     message,
+    artistImage: artistImage || undefined,
   };
 }
 

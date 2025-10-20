@@ -1,66 +1,65 @@
-import { useState, useEffect, useRef } from 'react'
-import axios from 'axios'
+import { useState, useEffect, useRef } from 'react';
 
 /**
  * Custom hook for debounced autocomplete suggestions
  *
  * @param {string} query - The search query
+ * @param {Function} apiFunction - API function to call for suggestions
+ * @param {number} minLength - Minimum query length to trigger search (default: 2)
  * @param {number} delay - Debounce delay in milliseconds (default: 300ms)
  * @returns {Object} - { suggestions, loading, error }
  */
-export function useAutocomplete(query, delay = 300) {
-  const [suggestions, setSuggestions] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const abortControllerRef = useRef(null)
+export function useAutocomplete(query, apiFunction, minLength = 2, delay = 300) {
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const abortControllerRef = useRef(null);
 
   useEffect(() => {
     // Don't search if query is empty or too short
-    if (!query || query.trim().length < 2) {
-      setSuggestions([])
-      setLoading(false)
-      return
+    if (!query || query.trim().length < minLength) {
+      setSuggestions([]);
+      setLoading(false);
+      return;
     }
 
     // Cancel any pending request
     if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
+      abortControllerRef.current.abort();
     }
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     // Create new abort controller for this request
-    abortControllerRef.current = new AbortController()
+    abortControllerRef.current = new AbortController();
 
     // Debounce the API call
     const timeoutId = setTimeout(async () => {
       try {
-        const response = await axios.get('http://localhost:3000/api/autocomplete', {
-          params: { q: query.trim() },
-          signal: abortControllerRef.current.signal
-        })
-
-        setSuggestions(response.data)
-        setLoading(false)
+        const data = await apiFunction(query, abortControllerRef.current.signal);
+        setSuggestions(data);
+        setLoading(false);
       } catch (err) {
-        if (err.name !== 'CanceledError') {
-          console.error('Autocomplete error:', err)
-          setError(err.message)
-          setSuggestions([])
+        if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+          console.error('Autocomplete error:', err);
+          setError(err.message);
+          setSuggestions([]);
         }
-        setLoading(false)
+        setLoading(false);
       }
-    }, delay)
+    }, delay);
 
     // Cleanup function
     return () => {
-      clearTimeout(timeoutId)
+      clearTimeout(timeoutId);
       if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
+        abortControllerRef.current.abort();
       }
-    }
-  }, [query, delay])
+    };
+  }, [query, apiFunction, minLength, delay]);
 
-  return { suggestions, loading, error }
+  return { suggestions, loading, error };
 }
+
+export default useAutocomplete;
