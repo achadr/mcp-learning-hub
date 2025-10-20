@@ -11,10 +11,15 @@ export function PerformanceCard({
   attendees,
   genre,
   imageUrl,
-  setlistUrl
+  setlistUrl,
+  isFuture = false
 }) {
   return (
-    <Card className="overflow-hidden group hover:shadow-2xl transition-all duration-300 border-white/20 bg-white/10 backdrop-blur-lg">
+    <Card className={`overflow-hidden group hover:shadow-2xl transition-all duration-300 ${
+      isFuture
+        ? 'border-cyan-400/40 bg-gradient-to-br from-cyan-500/10 via-emerald-500/10 to-blue-500/10 backdrop-blur-lg shadow-lg shadow-cyan-500/20'
+        : 'border-white/20 bg-white/10 backdrop-blur-lg'
+    }`}>
       <div className="relative h-48 overflow-hidden">
         <img
           src={imageUrl || "https://images.unsplash.com/photo-1566735355837-2269c24e644e?w=1080&q=80"}
@@ -24,12 +29,27 @@ export function PerformanceCard({
             e.target.src = "https://images.unsplash.com/photo-1566735355837-2269c24e644e?w=1080&q=80";
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-        {genre && (
-          <Badge className="absolute top-4 right-4 bg-purple-500/90 backdrop-blur-sm border-white/20">
-            {genre}
-          </Badge>
-        )}
+        <div className={`absolute inset-0 bg-gradient-to-t ${
+          isFuture
+            ? 'from-cyan-900/80 via-emerald-900/40 to-transparent'
+            : 'from-black/80 via-black/40 to-transparent'
+        }`} />
+        <div className="absolute top-4 right-4 flex gap-2">
+          {isFuture && (
+            <Badge className="bg-gradient-to-r from-cyan-500 to-emerald-500 border-cyan-300/30 backdrop-blur-sm animate-pulse">
+              Upcoming
+            </Badge>
+          )}
+          {genre && (
+            <Badge className={`backdrop-blur-sm border-white/20 ${
+              isFuture
+                ? 'bg-cyan-500/90'
+                : 'bg-purple-500/90'
+            }`}>
+              {genre}
+            </Badge>
+          )}
+        </div>
       </div>
 
       <div className="p-6 space-y-4">
@@ -40,19 +60,19 @@ export function PerformanceCard({
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2 text-white/80">
-            <MapPin className="w-4 h-4 text-purple-400" />
+            <MapPin className={`w-4 h-4 ${isFuture ? 'text-cyan-400' : 'text-purple-400'}`} />
             <span className="text-sm">{city}{country ? `, ${country}` : ''}</span>
           </div>
 
           <div className="flex items-center gap-2 text-white/80">
-            <Calendar className="w-4 h-4 text-blue-400" />
+            <Calendar className={`w-4 h-4 ${isFuture ? 'text-emerald-400' : 'text-blue-400'}`} />
             <span className="text-sm">{date}</span>
           </div>
 
           {attendees > 0 && (
             <div className="flex items-center gap-2 text-white/80 col-span-2">
-              <Users className="w-4 h-4 text-pink-400" />
-              <span className="text-sm">{attendees.toLocaleString()} attendees</span>
+              <Users className={`w-4 h-4 ${isFuture ? 'text-teal-400' : 'text-pink-400'}`} />
+              <span className="text-sm">{attendees.toLocaleString()} {isFuture ? 'expected' : 'attendees'}</span>
             </div>
           )}
         </div>

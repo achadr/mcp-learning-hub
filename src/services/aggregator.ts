@@ -7,20 +7,101 @@ import { searchSongkick } from './songkick.js';
 import { searchTicketmaster } from './ticketmaster.js';
 import { searchWikipedia } from './wikipedia.js';
 import { searchNews } from './news.js';
+import { searchMusicBrainz } from './musicbrainz.js';
 import type { PerformanceEvent, PerformanceResult, SearchParams, SourceLink } from '../types.js';
+
+// Country name to ISO code mapping
+const COUNTRY_TO_ISO: Record<string, string> = {
+  'united states': 'US',
+  'usa': 'US',
+  'america': 'US',
+  'united kingdom': 'GB',
+  'uk': 'GB',
+  'england': 'GB',
+  'britain': 'GB',
+  'france': 'FR',
+  'germany': 'DE',
+  'spain': 'ES',
+  'italy': 'IT',
+  'canada': 'CA',
+  'australia': 'AU',
+  'japan': 'JP',
+  'brazil': 'BR',
+  'mexico': 'MX',
+  'argentina': 'AR',
+  'china': 'CN',
+  'india': 'IN',
+  'russia': 'RU',
+  'south korea': 'KR',
+  'netherlands': 'NL',
+  'belgium': 'BE',
+  'switzerland': 'CH',
+  'austria': 'AT',
+  'sweden': 'SE',
+  'norway': 'NO',
+  'denmark': 'DK',
+  'finland': 'FI',
+  'poland': 'PL',
+  'portugal': 'PT',
+  'greece': 'GR',
+  'ireland': 'IE',
+  'czech republic': 'CZ',
+  'hungary': 'HU',
+  'israel': 'IL',
+  'turkey': 'TR',
+  'egypt': 'EG',
+  'south africa': 'ZA',
+  'new zealand': 'NZ',
+  'singapore': 'SG',
+  'thailand': 'TH',
+  'malaysia': 'MY',
+  'indonesia': 'ID',
+  'philippines': 'PH',
+  'hong kong': 'HK',
+  'taiwan': 'TW',
+  'chile': 'CL',
+  'colombia': 'CO',
+  'peru': 'PE',
+  'united arab emirates': 'AE',
+  'uae': 'AE',
+  'saudi arabia': 'SA',
+};
 
 export async function aggregatePerformanceData(
   params: SearchParams
 ): Promise<PerformanceResult> {
-  console.log(`[Aggregator] Searching for: ${params.artist} in ${params.country || 'all locations'}`);
+  // Normalize country name to ISO code for better API compatibility
+  const originalCountry = params.country;
+  let normalizedCountry = params.country;
+
+  if (params.country) {
+    const countryLower = params.country.toLowerCase();
+    // If we have a mapping, use the ISO code
+    if (COUNTRY_TO_ISO[countryLower]) {
+      normalizedCountry = COUNTRY_TO_ISO[countryLower];
+      console.log(`[Aggregator] Normalized country: ${params.country} -> ${normalizedCountry}`);
+    } else if (params.country.length === 2) {
+      // Already an ISO code, use uppercase
+      normalizedCountry = params.country.toUpperCase();
+    }
+  }
+
+  console.log(`[Aggregator] Searching for: ${params.artist} in ${normalizedCountry || 'all locations'}`);
+
+  // Create normalized params for API calls
+  const normalizedParams: SearchParams = {
+    artist: params.artist,
+    country: normalizedCountry,
+  };
 
   // Call all services in parallel
-  const [setlistfmResult, songkickResult, ticketmasterResult, wikipediaResult, newsResult] = await Promise.all([
-    searchSetlistFm(params),
-    searchSongkick(params),
-    searchTicketmaster(params),
-    searchWikipedia(params),
-    searchNews(params),
+  const [setlistfmResult, songkickResult, ticketmasterResult, musicbrainzResult, wikipediaResult, newsResult] = await Promise.all([
+    searchSetlistFm(normalizedParams),
+    searchSongkick(normalizedParams),
+    searchTicketmaster(normalizedParams),
+    searchMusicBrainz(normalizedParams),
+    searchWikipedia(params), // Use original for Wikipedia (better for search)
+    searchNews(params), // Use original for News (better for search)
   ]);
 
   // Combine events from music databases
@@ -36,6 +117,10 @@ export async function aggregatePerformanceData(
 
   if (ticketmasterResult.success && ticketmasterResult.data) {
     allEvents.push(...ticketmasterResult.data);
+  }
+
+  if (musicbrainzResult.success && musicbrainzResult.data) {
+    allEvents.push(...musicbrainzResult.data);
   }
 
   // Combine source links from Wikipedia and News
@@ -69,6 +154,7 @@ export async function aggregatePerformanceData(
     if (!setlistfmResult.success) errors.push(`Setlist.fm: ${setlistfmResult.error}`);
     if (!songkickResult.success) errors.push(`Songkick: ${songkickResult.error}`);
     if (!ticketmasterResult.success) errors.push(`Ticketmaster: ${ticketmasterResult.error}`);
+    if (!musicbrainzResult.success) errors.push(`MusicBrainz: ${musicbrainzResult.error}`);
 
     if (errors.length > 0) {
       message = `No performances found. Some services had errors: ${errors.join('; ')}`;
@@ -79,7 +165,7 @@ export async function aggregatePerformanceData(
 
   return {
     artist: params.artist,
-    location: params.country || 'worldwide',
+    location: originalCountry || 'worldwide',
     performed,
     events: uniqueEvents,
     sources: allSources.slice(0, 10), // Limit to top 10 sources

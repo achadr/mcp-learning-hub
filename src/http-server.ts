@@ -162,6 +162,87 @@ app.get('/api/autocomplete', (req, res) => {
 });
 
 /**
+ * Country autocomplete endpoint - Get country suggestions
+ *
+ * GET /api/autocomplete/countries?q=<query>
+ *
+ * Returns a list of country suggestions based on the query
+ */
+app.get('/api/autocomplete/countries', (req, res) => {
+  try {
+    const query = (req.query.q as string || '').toLowerCase().trim();
+
+    if (!query) {
+      return res.json([]);
+    }
+
+    // Popular countries where concerts are frequently held
+    const countries = [
+      'United States',
+      'United Kingdom',
+      'Canada',
+      'Australia',
+      'Germany',
+      'France',
+      'Spain',
+      'Italy',
+      'Netherlands',
+      'Belgium',
+      'Switzerland',
+      'Austria',
+      'Sweden',
+      'Norway',
+      'Denmark',
+      'Finland',
+      'Poland',
+      'Czech Republic',
+      'Hungary',
+      'Greece',
+      'Portugal',
+      'Ireland',
+      'Japan',
+      'South Korea',
+      'China',
+      'Singapore',
+      'Thailand',
+      'Malaysia',
+      'Indonesia',
+      'Philippines',
+      'Taiwan',
+      'Hong Kong',
+      'India',
+      'Brazil',
+      'Argentina',
+      'Chile',
+      'Mexico',
+      'Colombia',
+      'Peru',
+      'New Zealand',
+      'South Africa',
+      'Russia',
+      'Turkey',
+      'Israel',
+      'United Arab Emirates',
+      'Saudi Arabia',
+      'Egypt',
+    ];
+
+    // Filter countries that match the query
+    const suggestions = countries
+      .filter(country => country.toLowerCase().includes(query))
+      .slice(0, 10); // Return max 10 suggestions
+
+    res.json(suggestions);
+  } catch (error) {
+    console.error('[HTTP Server] Country autocomplete error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
  * Root endpoint - API documentation
  */
 app.get('/', (req, res) => {
@@ -174,13 +255,15 @@ app.get('/', (req, res) => {
       'GET /api/performances': 'Search for performances (params: artist, country)',
       'GET /api/summary': 'Get quick text summary (params: artist, country)',
       'GET /api/autocomplete': 'Get artist suggestions (params: q)',
+      'GET /api/autocomplete/countries': 'Get country suggestions (params: q)',
     },
-    dataSources: ['Songkick', 'Ticketmaster', 'Wikipedia', 'News API'],
+    dataSources: ['Setlist.fm', 'MusicBrainz', 'Songkick', 'Ticketmaster', 'Wikipedia', 'News API'],
     examples: [
       '/api/performances?artist=Coldplay&country=Brazil',
       '/api/performances?artist=Taylor%20Swift&country=France',
       '/api/summary?artist=The%20Beatles&country=USA',
       '/api/autocomplete?q=cold',
+      '/api/autocomplete/countries?q=uni',
     ],
   });
 });

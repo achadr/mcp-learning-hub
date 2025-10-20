@@ -9,6 +9,14 @@ import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:3000/api';
 
+// Helper function to check if event is in the future
+const isFutureEvent = (dateString) => {
+  const eventDate = new Date(dateString);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset time to compare only dates
+  return eventDate >= today;
+};
+
 export default function App() {
   const [artist, setArtist] = useState("");
   const [country, setCountry] = useState("");
@@ -19,6 +27,9 @@ export default function App() {
   const [artistFocused, setArtistFocused] = useState(false);
   const [artistSuggestions, setArtistSuggestions] = useState([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [countryFocused, setCountryFocused] = useState(false);
+  const [countrySuggestions, setCountrySuggestions] = useState([]);
+  const [loadingCountrySuggestions, setLoadingCountrySuggestions] = useState(false);
 
   // Extract performances from API results
   const performances = useMemo(() => {
@@ -65,6 +76,34 @@ export default function App() {
     // Cleanup function to cancel the timeout if user keeps typing
     return () => clearTimeout(timeoutId);
   }, [artist]);
+
+  // Fetch country suggestions from API with debouncing
+  useEffect(() => {
+    // Only fetch if user has typed 2+ characters
+    if (!country.trim() || country.trim().length < 2) {
+      setCountrySuggestions([]);
+      return;
+    }
+
+    // Debounce: Wait 300ms after user stops typing
+    const timeoutId = setTimeout(async () => {
+      setLoadingCountrySuggestions(true);
+      try {
+        const response = await axios.get(`${API_BASE_URL}/autocomplete/countries`, {
+          params: { q: country.trim() }
+        });
+        setCountrySuggestions(response.data);
+      } catch (err) {
+        console.error('Failed to fetch country suggestions:', err);
+        setCountrySuggestions([]);
+      } finally {
+        setLoadingCountrySuggestions(false);
+      }
+    }, 300);
+
+    // Cleanup function to cancel the timeout if user keeps typing
+    return () => clearTimeout(timeoutId);
+  }, [country]);
 
   // Filter performances by search query
   const filteredPerformances = useMemo(() => {
@@ -168,7 +207,7 @@ export default function App() {
                 />
                 {/* Autocomplete Suggestions */}
                 {artistFocused && (loadingSuggestions || artistSuggestions.length > 0) && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white/10 backdrop-blur-lg border border-white/20 rounded-lg overflow-hidden z-50">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white/10 backdrop-blur-lg border border-white/20 rounded-lg overflow-hidden z-[9999]">
                     {loadingSuggestions ? (
                       <div className="px-4 py-3 text-white/60 text-sm">
                         Searching artists...
@@ -194,15 +233,46 @@ export default function App() {
                   </div>
                 )}
               </div>
-              <Input
-                type="text"
-                placeholder="Country (optional, e.g., US, Brazil)"
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="w-64 bg-white/10 backdrop-blur-lg border-white/20 text-white placeholder:text-white/50"
-                disabled={loading}
-              />
+              <div className="relative w-64">
+                <Input
+                  type="text"
+                  placeholder="Country (optional, e.g., US, Brazil)"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  onFocus={() => setCountryFocused(true)}
+                  onBlur={() => setTimeout(() => setCountryFocused(false), 200)}
+                  className="w-full bg-white/10 backdrop-blur-lg border-white/20 text-white placeholder:text-white/50"
+                  disabled={loading}
+                />
+                {/* Country Autocomplete Suggestions */}
+                {countryFocused && (loadingCountrySuggestions || countrySuggestions.length > 0) && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white/10 backdrop-blur-lg border border-white/20 rounded-lg overflow-hidden z-[9999]">
+                    {loadingCountrySuggestions ? (
+                      <div className="px-4 py-3 text-white/60 text-sm">
+                        Searching countries...
+                      </div>
+                    ) : countrySuggestions.length > 0 ? (
+                      countrySuggestions.map((suggestion, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setCountry(suggestion);
+                            setCountryFocused(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-white hover:bg-white/20 transition-colors"
+                        >
+                          {suggestion}
+                        </button>
+                      ))
+                    ) : country.length >= 2 && (
+                      <div className="px-4 py-3 text-white/60 text-sm">
+                        No countries found
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               <Button
                 onClick={handleSearch}
                 disabled={loading || !artist.trim()}
@@ -288,7 +358,7 @@ export default function App() {
                       ✅
                     </div>
                     <div>
-                      <h2 className="text-white text-2xl font-bold">
+                      <h2 className="text-white text-2xl font-bold z-0">
                         Yes! {results.artist} has performed in {results.location || country}
                       </h2>
                       {results.message && (
@@ -362,7 +432,11 @@ export default function App() {
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {filteredPerformances.map(performance => (
-                        <PerformanceCard key={performance.id} {...performance} />
+                        <PerformanceCard
+                          key={performance.id}
+                          {...performance}
+                          isFuture={isFutureEvent(performance.date)}
+                        />
                       ))}
                     </div>
                   )}
@@ -389,7 +463,10 @@ export default function App() {
                               )}
                             </div>
                             <div className="flex-1 pb-8">
-                              <PerformanceCard {...performance} />
+                              <PerformanceCard
+                                {...performance}
+                                isFuture={isFutureEvent(performance.date)}
+                              />
                             </div>
                           </div>
                         ))}
