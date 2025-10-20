@@ -38,6 +38,7 @@ export const transformEvents = (events, artistName, countryName, artistImage) =>
     genre: event.genre || 'Music',
     imageUrl: artistImage || event.imageUrl || DEFAULT_PERFORMANCE_IMAGE,
     setlistUrl: event.setlistUrl || event.url || '',
+    setlist: event.setlist || [],
   }));
 };
 
@@ -119,4 +120,24 @@ export const sortByUpcomingFirst = (performances) => {
 
   // Combine: future first, then past
   return [...futureEvents, ...pastEvents];
+};
+
+/**
+ * Sort performances by date (oldest first)
+ * @param {Array} performances - Array of performance objects
+ * @returns {Array} Sorted performances
+ */
+export const sortByDateAsc = (performances) => {
+  return [...performances].sort((a, b) => new Date(a.date) - new Date(b.date));
+};
+
+/**
+ * Filter out upcoming concerts
+ * @param {Array} performances - Array of performance objects
+ * @returns {Array} Only past performances
+ */
+export const filterPastOnly = (performances) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return performances.filter(p => new Date(p.date) < today);
 };

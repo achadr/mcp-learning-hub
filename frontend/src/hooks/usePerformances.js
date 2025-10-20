@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react';
 import api from '../services/api';
-import { transformEvents, filterPerformances, calculateStats } from '../utils/helpers';
+import {
+  transformEvents,
+  calculateStats
+} from '../utils/helpers';
 
 /**
  * Custom hook for managing performance search and data
@@ -10,7 +13,8 @@ export const usePerformances = () => {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState('newest-first'); // 'newest-first', 'oldest-first'
+  const [showUpcoming, setShowUpcoming] = useState(true);
 
   /**
    * Transform API results to performance objects
@@ -27,11 +31,49 @@ export const usePerformances = () => {
   }, [results]);
 
   /**
-   * Filter performances by local search query
+   * Filter and sort performances by sort order and upcoming filter
+   * Upcoming concerts always appear first (when shown), sorted by soonest
+   * Past concerts sorted by selected order
    */
   const filteredPerformances = useMemo(() => {
-    return filterPerformances(performances, searchQuery);
-  }, [performances, searchQuery]);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Step 1: Separate into upcoming and past
+    const upcomingEvents = [];
+    const pastEvents = [];
+
+    performances.forEach(performance => {
+      const eventDate = new Date(performance.date);
+      if (!isNaN(eventDate.getTime()) && eventDate >= today) {
+        upcomingEvents.push(performance);
+      } else if (!isNaN(eventDate.getTime())) {
+        pastEvents.push(performance);
+      }
+    });
+
+    // Step 2: Sort upcoming (always soonest first - ascending)
+    upcomingEvents.sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return dateA - dateB;
+    });
+
+    // Step 3: Sort past based on selected order
+    pastEvents.sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+
+      if (sortOrder === 'oldest-first') {
+        return dateA - dateB; // Ascending: oldest first
+      } else {
+        return dateB - dateA; // Descending: newest first
+      }
+    });
+
+    // Step 4: Combine - upcoming first (if shown), then past
+    return showUpcoming ? [...upcomingEvents, ...pastEvents] : pastEvents;
+  }, [performances, sortOrder, showUpcoming]);
 
   /**
    * Calculate statistics for filtered performances
@@ -51,7 +93,6 @@ export const usePerformances = () => {
     setLoading(true);
     setError(null);
     setResults(null);
-    setSearchQuery('');
 
     try {
       const data = await api.getPerformances(artist, country);
@@ -73,7 +114,6 @@ export const usePerformances = () => {
   const clearResults = () => {
     setResults(null);
     setError(null);
-    setSearchQuery('');
   };
 
   return {
@@ -81,14 +121,16 @@ export const usePerformances = () => {
     results,
     loading,
     error,
-    searchQuery,
     performances,
     filteredPerformances,
     stats,
+    sortOrder,
+    showUpcoming,
 
     // Methods
     searchPerformances,
-    setSearchQuery,
+    setSortOrder,
+    setShowUpcoming,
     clearResults
   };
 };

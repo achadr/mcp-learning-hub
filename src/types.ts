@@ -10,6 +10,7 @@ export interface PerformanceEvent {
   source: string;
   sourceUrl: string;
   confidence: 'high' | 'medium' | 'low';
+  setlist?: string[];
 }
 
 export interface PerformanceResult {

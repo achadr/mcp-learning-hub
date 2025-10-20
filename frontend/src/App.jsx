@@ -1,6 +1,5 @@
 import { Music } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
-import { Input } from "./components/ui/input";
 import { usePerformances } from "./hooks/usePerformances";
 import { SearchForm } from "./components/SearchForm";
 import { LoadingState } from "./components/states/LoadingState";
@@ -12,17 +11,20 @@ import { StatsOverview } from "./components/StatsOverview";
 import { PerformanceGrid } from "./components/PerformanceGrid";
 import { PerformanceTimeline } from "./components/PerformanceTimeline";
 import { SourcesList } from "./components/SourcesList";
+import { FilterControls } from "./components/FilterControls";
 
 export default function App() {
   const {
     results,
     loading,
     error,
-    searchQuery,
     filteredPerformances,
     stats,
+    sortOrder,
+    showUpcoming,
     searchPerformances,
-    setSearchQuery
+    setSortOrder,
+    setShowUpcoming
   } = usePerformances();
 
   const hasResults = results && results.performed && filteredPerformances.length > 0;
@@ -93,18 +95,15 @@ export default function App() {
               {/* Stats Overview */}
               <StatsOverview stats={stats} />
 
-              {/* Filter within results */}
-              {filteredPerformances.length > 3 && (
-                <div className="mb-6">
-                  <Input
-                    type="text"
-                    placeholder="Filter results by city, venue, or country..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="bg-white/10 backdrop-blur-lg border-white/20 text-white placeholder:text-white/50"
-                  />
-                </div>
-              )}
+              {/* Filter Controls */}
+              <div className="mb-6">
+                <FilterControls
+                  sortOrder={sortOrder}
+                  onSortChange={setSortOrder}
+                  showUpcoming={showUpcoming}
+                  onShowUpcomingChange={setShowUpcoming}
+                />
+              </div>
 
               {/* Tabs */}
               <Tabs defaultValue="grid" className="space-y-6">

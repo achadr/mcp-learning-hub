@@ -83,6 +83,25 @@ export async function searchSetlistFm(
       const venue = setlist.venue;
       const city = venue?.city;
 
+      // Extract songs from setlist
+      const songs: string[] = [];
+      if (setlist.sets && setlist.sets.set) {
+        // Setlist.fm can have multiple sets (e.g., main set, encore)
+        for (const set of setlist.sets.set) {
+          if (set.song && Array.isArray(set.song)) {
+            for (const song of set.song) {
+              if (song.name) {
+                // Some songs have cover info, format as "Song Name (Cover Artist)"
+                const songName = song.cover
+                  ? `${song.name} (${song.cover.name} cover)`
+                  : song.name;
+                songs.push(songName);
+              }
+            }
+          }
+        }
+      }
+
       return {
         date: setlist.eventDate || 'Date unknown',
         venue: venue?.name || 'Venue unknown',
@@ -91,6 +110,7 @@ export async function searchSetlistFm(
         source: 'Setlist.fm',
         sourceUrl: setlist.url || `https://www.setlist.fm/setlist/${artist.name}/${setlist.id}.html`,
         confidence: 'high' as const,
+        setlist: songs.length > 0 ? songs : undefined,
       };
     });
 

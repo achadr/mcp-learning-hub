@@ -1,6 +1,6 @@
 import { Music } from 'lucide-react';
 import { PerformanceCard } from './PerformanceCard';
-import { isFutureEvent, sortByUpcomingFirst } from '../utils/helpers';
+import { isFutureEvent } from '../utils/helpers';
 import { MESSAGES } from '../constants';
 
 export const PerformanceGrid = ({ performances }) => {
@@ -13,12 +13,10 @@ export const PerformanceGrid = ({ performances }) => {
     );
   }
 
-  // Sort performances: upcoming first (soonest), then past (newest)
-  const sortedPerformances = sortByUpcomingFirst(performances);
-
+  // Performances are already sorted and filtered by the hook
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {sortedPerformances.map(performance => (
+      {performances.map(performance => (
         <PerformanceCard
           key={performance.id}
           {...performance}
