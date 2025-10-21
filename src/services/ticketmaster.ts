@@ -5,6 +5,7 @@
 
 import { config } from '../config.js';
 import type { PerformanceEvent, SearchParams, ServiceResponse } from '../types.js';
+import { getVenueCapacityWithFallback } from './venueCapacity.js';
 
 export async function searchTicketmaster(
   params: SearchParams
@@ -44,15 +45,22 @@ export async function searchTicketmaster(
     const performanceEvents: PerformanceEvent[] = events.map((event: any) => {
       const venue = event._embedded?.venues?.[0];
       const date = event.dates?.start?.localDate || 'Date unknown';
+      const venueName = venue?.name || 'Venue unknown';
+      const cityName = venue?.city?.name || 'City unknown';
+      const countryName = venue?.country?.name || 'Country unknown';
+
+      // Get venue capacity
+      const capacity = getVenueCapacityWithFallback(venueName, cityName, countryName);
 
       return {
         date,
-        venue: venue?.name || 'Venue unknown',
-        city: venue?.city?.name || 'City unknown',
-        country: venue?.country?.name || 'Country unknown',
+        venue: venueName,
+        city: cityName,
+        country: countryName,
         source: 'Ticketmaster',
         sourceUrl: event.url || '',
         confidence: 'high' as const,
+        capacity,
       };
     });
 
