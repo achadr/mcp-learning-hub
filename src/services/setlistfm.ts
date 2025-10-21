@@ -5,6 +5,7 @@
 
 import { config } from '../config.js';
 import type { PerformanceEvent, SearchParams, ServiceResponse } from '../types.js';
+import { getVenueCapacityWithFallback } from './venueCapacity.js';
 
 export async function searchSetlistFm(
   params: SearchParams
@@ -82,6 +83,9 @@ export async function searchSetlistFm(
     const performanceEvents: PerformanceEvent[] = setlists.map((setlist: any) => {
       const venue = setlist.venue;
       const city = venue?.city;
+      const venueName = venue?.name || 'Venue unknown';
+      const cityName = city?.name || 'City unknown';
+      const countryName = city?.country?.name || 'Country unknown';
 
       // Extract songs from setlist
       const songs: string[] = [];
@@ -102,15 +106,19 @@ export async function searchSetlistFm(
         }
       }
 
+      // Get venue capacity
+      const capacity = getVenueCapacityWithFallback(venueName, cityName, countryName);
+
       return {
         date: setlist.eventDate || 'Date unknown',
-        venue: venue?.name || 'Venue unknown',
-        city: city?.name || 'City unknown',
-        country: city?.country?.name || 'Country unknown',
+        venue: venueName,
+        city: cityName,
+        country: countryName,
         source: 'Setlist.fm',
         sourceUrl: setlist.url || `https://www.setlist.fm/setlist/${artist.name}/${setlist.id}.html`,
         confidence: 'high' as const,
         setlist: songs.length > 0 ? songs : undefined,
+        capacity,
       };
     });
 

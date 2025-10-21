@@ -11,7 +11,7 @@ export function PerformanceCard({
   city,
   country,
   date,
-  attendees,
+  capacity,
   genre,
   imageUrl,
   setlistUrl,
@@ -76,10 +76,10 @@ export function PerformanceCard({
               </div>
             </div>
 
-            {attendees > 0 && (
+            {capacity > 0 && (
               <div className="flex items-center gap-2 text-white/80">
                 <Users className={`w-4 h-4 ${isFuture ? 'text-teal-400' : 'text-pink-400'}`} />
-                <span className="text-sm">{attendees.toLocaleString()} {isFuture ? 'expected' : 'attendees'}</span>
+                <span className="text-sm">Capacity: {capacity.toLocaleString()}</span>
               </div>
             )}
           </div>

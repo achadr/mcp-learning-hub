@@ -5,6 +5,7 @@
 
 import { config } from '../config.js';
 import type { PerformanceEvent, SearchParams, ServiceResponse } from '../types.js';
+import { getVenueCapacityWithFallback } from './venueCapacity.js';
 
 export async function searchSongkick(
   params: SearchParams
@@ -63,15 +64,25 @@ export async function searchSongkick(
     });
 
     // Transform to our format
-    const performanceEvents: PerformanceEvent[] = filteredEvents.map((event: any) => ({
-      date: event.start?.date || 'Date unknown',
-      venue: event.venue?.displayName || 'Venue unknown',
-      city: event.location?.city?.displayName || 'City unknown',
-      country: event.location?.city?.country?.displayName || 'Country unknown',
-      source: 'Songkick',
-      sourceUrl: event.uri || '',
-      confidence: 'high' as const,
-    }));
+    const performanceEvents: PerformanceEvent[] = filteredEvents.map((event: any) => {
+      const venueName = event.venue?.displayName || 'Venue unknown';
+      const cityName = event.location?.city?.displayName || 'City unknown';
+      const countryName = event.location?.city?.country?.displayName || 'Country unknown';
+
+      // Get venue capacity
+      const capacity = getVenueCapacityWithFallback(venueName, cityName, countryName);
+
+      return {
+        date: event.start?.date || 'Date unknown',
+        venue: venueName,
+        city: cityName,
+        country: countryName,
+        source: 'Songkick',
+        sourceUrl: event.uri || '',
+        confidence: 'high' as const,
+        capacity,
+      };
+    });
 
     return {
       success: true,

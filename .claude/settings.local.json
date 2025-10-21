@@ -12,7 +12,8 @@
       "Bash(done)",
       "Bash(npm run dev:*)",
       "Bash(find:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(npm run dev:http:*)"
     ],
     "deny": [],
     "ask": []

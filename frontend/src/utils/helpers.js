@@ -34,7 +34,7 @@ export const transformEvents = (events, artistName, countryName, artistImage) =>
     city: event.location || event.city || '',
     country: event.country || countryName || '',
     date: event.date || 'Unknown Date',
-    attendees: event.attendees || 0,
+    capacity: event.capacity || 0,
     genre: event.genre || 'Music',
     imageUrl: artistImage || event.imageUrl || DEFAULT_PERFORMANCE_IMAGE,
     setlistUrl: event.setlistUrl || event.url || '',
@@ -49,13 +49,11 @@ export const transformEvents = (events, artistName, countryName, artistImage) =>
  */
 export const calculateStats = (performances) => {
   const totalPerformances = performances.length;
-  const totalAttendees = performances.reduce((sum, p) => sum + p.attendees, 0);
   const uniqueCities = new Set(performances.map(p => p.city).filter(Boolean)).size;
   const uniqueCountries = new Set(performances.map(p => p.country).filter(Boolean)).size;
 
   return {
     totalPerformances,
-    totalAttendees,
     uniqueCities: uniqueCities || 0,
     uniqueCountries: uniqueCountries || 0,
   };

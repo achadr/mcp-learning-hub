@@ -12,6 +12,7 @@ import { PerformanceGrid } from "./components/PerformanceGrid";
 import { PerformanceTimeline } from "./components/PerformanceTimeline";
 import { SourcesList } from "./components/SourcesList";
 import { FilterControls } from "./components/FilterControls";
+import { MapView } from "./components/MapView";
 
 export default function App() {
   const {
@@ -114,6 +115,9 @@ export default function App() {
                   <TabsTrigger value="timeline" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
                     Timeline
                   </TabsTrigger>
+                  <TabsTrigger value="map" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
+                    Map View
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="grid" className="space-y-6">
@@ -122,6 +126,10 @@ export default function App() {
 
                 <TabsContent value="timeline" className="space-y-6">
                   <PerformanceTimeline performances={filteredPerformances} />
+                </TabsContent>
+
+                <TabsContent value="map" className="space-y-6">
+                  <MapView performances={filteredPerformances} />
                 </TabsContent>
               </Tabs>
 

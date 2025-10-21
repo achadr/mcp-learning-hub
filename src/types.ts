@@ -11,6 +11,7 @@ export interface PerformanceEvent {
   sourceUrl: string;
   confidence: 'high' | 'medium' | 'low';
   setlist?: string[];
+  capacity?: number;
 }
 
 export interface PerformanceResult {
