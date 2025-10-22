@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import api from '../services/api';
 import {
   transformEvents,
-  calculateStats
+  calculateStats,
+  parseDate
 } from '../utils/helpers';
 
 /**
@@ -44,25 +45,25 @@ export const usePerformances = () => {
     const pastEvents = [];
 
     performances.forEach(performance => {
-      const eventDate = new Date(performance.date);
-      if (!isNaN(eventDate.getTime()) && eventDate >= today) {
+      const eventDate = parseDate(performance.date);
+      if (eventDate && eventDate >= today) {
         upcomingEvents.push(performance);
-      } else if (!isNaN(eventDate.getTime())) {
+      } else if (eventDate) {
         pastEvents.push(performance);
       }
     });
 
     // Step 2: Sort upcoming (always soonest first - ascending)
     upcomingEvents.sort((a, b) => {
-      const dateA = new Date(a.date).getTime();
-      const dateB = new Date(b.date).getTime();
+      const dateA = parseDate(a.date)?.getTime() || 0;
+      const dateB = parseDate(b.date)?.getTime() || 0;
       return dateA - dateB;
     });
 
     // Step 3: Sort past based on selected order
     pastEvents.sort((a, b) => {
-      const dateA = new Date(a.date).getTime();
-      const dateB = new Date(b.date).getTime();
+      const dateA = parseDate(a.date)?.getTime() || 0;
+      const dateB = parseDate(b.date)?.getTime() || 0;
 
       if (sortOrder === 'oldest-first') {
         return dateA - dateB; // Ascending: oldest first

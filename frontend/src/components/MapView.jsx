@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { MapPin, Calendar, Users, ExternalLink } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { parseDate } from '../utils/helpers';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -180,8 +181,8 @@ export function MapView({ performances }) {
     return performances
       .map((performance) => {
         const coords = geocodeLocation(performance.city, performance.country);
-        const eventDate = new Date(performance.date);
-        const isFuture = !isNaN(eventDate.getTime()) && eventDate >= today;
+        const eventDate = parseDate(performance.date);
+        const isFuture = eventDate && eventDate >= today;
 
         return {
           ...performance,

@@ -5,12 +5,40 @@ import { DEFAULT_PERFORMANCE_IMAGE } from '../constants';
  */
 
 /**
+ * Parse date string in multiple formats (DD-MM-YYYY, YYYY-MM-DD, etc.)
+ * @param {string} dateString - Date string in various formats
+ * @returns {Date|null} Parsed date or null if invalid
+ */
+export const parseDate = (dateString) => {
+  if (!dateString || dateString === 'Unknown Date' || dateString === 'Date unknown') {
+    return null;
+  }
+
+  // Try DD-MM-YYYY format first (27-04-2013)
+  const ddmmyyyyMatch = dateString.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (ddmmyyyyMatch) {
+    const [, day, month, year] = ddmmyyyyMatch;
+    return new Date(year, month - 1, day);
+  }
+
+  // Try standard ISO format (YYYY-MM-DD)
+  const date = new Date(dateString);
+  if (!isNaN(date.getTime())) {
+    return date;
+  }
+
+  return null;
+};
+
+/**
  * Check if an event date is in the future
  * @param {string} dateString - Date in ISO format (YYYY-MM-DD)
  * @returns {boolean} True if date is today or in the future
  */
 export const isFutureEvent = (dateString) => {
-  const eventDate = new Date(dateString);
+  const eventDate = parseDate(dateString);
+  if (!eventDate) return false;
+
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Reset time to compare only dates
   return eventDate >= today;
@@ -83,7 +111,11 @@ export const filterPerformances = (performances, query) => {
  * @returns {Array} Sorted performances
  */
 export const sortByDateDesc = (performances) => {
-  return [...performances].sort((a, b) => new Date(b.date) - new Date(a.date));
+  return [...performances].sort((a, b) => {
+    const dateA = parseDate(a.date)?.getTime() || 0;
+    const dateB = parseDate(b.date)?.getTime() || 0;
+    return dateB - dateA;
+  });
 };
 
 /**
@@ -102,19 +134,27 @@ export const sortByUpcomingFirst = (performances) => {
   const pastEvents = [];
 
   performances.forEach(performance => {
-    const eventDate = new Date(performance.date);
-    if (eventDate >= today) {
+    const eventDate = parseDate(performance.date);
+    if (eventDate && eventDate >= today) {
       futureEvents.push(performance);
-    } else {
+    } else if (eventDate) {
       pastEvents.push(performance);
     }
   });
 
   // Sort future events: soonest first (ascending)
-  futureEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+  futureEvents.sort((a, b) => {
+    const dateA = parseDate(a.date)?.getTime() || 0;
+    const dateB = parseDate(b.date)?.getTime() || 0;
+    return dateA - dateB;
+  });
 
   // Sort past events: newest first (descending)
-  pastEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
+  pastEvents.sort((a, b) => {
+    const dateA = parseDate(a.date)?.getTime() || 0;
+    const dateB = parseDate(b.date)?.getTime() || 0;
+    return dateB - dateA;
+  });
 
   // Combine: future first, then past
   return [...futureEvents, ...pastEvents];
@@ -126,7 +166,11 @@ export const sortByUpcomingFirst = (performances) => {
  * @returns {Array} Sorted performances
  */
 export const sortByDateAsc = (performances) => {
-  return [...performances].sort((a, b) => new Date(a.date) - new Date(b.date));
+  return [...performances].sort((a, b) => {
+    const dateA = parseDate(a.date)?.getTime() || 0;
+    const dateB = parseDate(b.date)?.getTime() || 0;
+    return dateA - dateB;
+  });
 };
 
 /**
@@ -137,5 +181,8 @@ export const sortByDateAsc = (performances) => {
 export const filterPastOnly = (performances) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  return performances.filter(p => new Date(p.date) < today);
+  return performances.filter(p => {
+    const eventDate = parseDate(p.date);
+    return eventDate && eventDate < today;
+  });
 };
