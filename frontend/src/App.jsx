@@ -1,3 +1,4 @@
+import { useState, useEffect, useMemo } from "react";
 import { Music } from "lucide-react";
 import { Toaster } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
@@ -15,8 +16,18 @@ import { SourcesList } from "./components/SourcesList";
 import { FilterControls } from "./components/FilterControls";
 import { MapView } from "./components/MapView";
 import { Analytics } from "./components/Analytics";
+import { SkeletonGrid } from "./components/skeletons/SkeletonCard";
+import { SkeletonTimeline } from "./components/skeletons/SkeletonTimeline";
+import { SkeletonMap } from "./components/skeletons/SkeletonMap";
+import { SkeletonAnalytics } from "./components/skeletons/SkeletonAnalytics";
+import { Pagination } from "./components/Pagination";
+
+const ITEMS_PER_PAGE = 24; // 24 items per page
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState("grid");
+  const [currentPage, setCurrentPage] = useState(1);
+
   const {
     results,
     loading,
@@ -27,10 +38,30 @@ export default function App() {
     showUpcoming,
     searchPerformances,
     setSortOrder,
-    setShowUpcoming
+    setShowUpcoming,
+    retryLastSearch
   } = usePerformances();
 
   const hasResults = results && results.performed && filteredPerformances.length > 0;
+
+  // Reset pagination when results change or tab changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredPerformances, activeTab]);
+
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
+
+  // Calculate paginated data for Grid and Timeline
+  const paginatedPerformances = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredPerformances.slice(startIndex, endIndex);
+  }, [filteredPerformances, currentPage]);
+
+  const totalPages = Math.ceil(filteredPerformances.length / ITEMS_PER_PAGE);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
@@ -66,11 +97,29 @@ export default function App() {
 
         {/* Main Content */}
         <main className="container mx-auto px-4 py-8">
-          {/* Loading State */}
-          {loading && <LoadingState />}
+          {/* Loading State with Skeletons */}
+          {loading && (
+            <div className="space-y-6">
+              {/* Stats skeleton */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-lg p-6 space-y-2">
+                    <div className="animate-pulse bg-white/10 h-4 w-24 rounded" />
+                    <div className="animate-pulse bg-white/10 h-8 w-16 rounded" />
+                  </div>
+                ))}
+              </div>
+
+              {/* Tab-specific skeleton */}
+              {activeTab === "grid" && <SkeletonGrid count={6} />}
+              {activeTab === "timeline" && <SkeletonTimeline count={5} />}
+              {activeTab === "map" && <SkeletonMap />}
+              {activeTab === "analytics" && <SkeletonAnalytics />}
+            </div>
+          )}
 
           {/* Error State */}
-          {error && !loading && <ErrorState error={error} />}
+          {error && !loading && <ErrorState error={error} onRetry={retryLastSearch} />}
 
           {/* No Results State */}
           {results && !loading && !results.performed && (
@@ -109,7 +158,7 @@ export default function App() {
               </div>
 
               {/* Tabs */}
-              <Tabs defaultValue="grid" className="space-y-6">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
                 <TabsList className="bg-white/10 backdrop-blur-lg border-white/20">
                   <TabsTrigger value="grid" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
                     Grid View
@@ -126,11 +175,25 @@ export default function App() {
                 </TabsList>
 
                 <TabsContent value="grid" className="space-y-6">
-                  <PerformanceGrid performances={filteredPerformances} />
+                  <PerformanceGrid performances={paginatedPerformances} />
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    totalItems={filteredPerformances.length}
+                  />
                 </TabsContent>
 
                 <TabsContent value="timeline" className="space-y-6">
-                  <PerformanceTimeline performances={filteredPerformances} />
+                  <PerformanceTimeline performances={paginatedPerformances} />
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    totalItems={filteredPerformances.length}
+                  />
                 </TabsContent>
 
                 <TabsContent value="map" className="space-y-6">

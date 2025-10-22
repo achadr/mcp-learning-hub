@@ -109,21 +109,46 @@ export async function aggregatePerformanceData(
 
   // Combine events from music databases
   const allEvents: PerformanceEvent[] = [];
+  const serviceStats: Record<string, number> = {};
 
   if (setlistfmResult.success && setlistfmResult.data) {
+    const count = setlistfmResult.data.length;
     allEvents.push(...setlistfmResult.data);
+    serviceStats['Setlist.fm'] = count;
+    console.log(`[Aggregator] ✅ Setlist.fm: ${count} events`);
+  } else {
+    console.log(`[Aggregator] ❌ Setlist.fm failed: ${setlistfmResult.error}`);
+    serviceStats['Setlist.fm'] = 0;
   }
 
   if (songkickResult.success && songkickResult.data) {
+    const count = songkickResult.data.length;
     allEvents.push(...songkickResult.data);
+    serviceStats['Songkick'] = count;
+    console.log(`[Aggregator] ✅ Songkick: ${count} events`);
+  } else {
+    console.log(`[Aggregator] ❌ Songkick failed: ${songkickResult.error}`);
+    serviceStats['Songkick'] = 0;
   }
 
   if (ticketmasterResult.success && ticketmasterResult.data) {
+    const count = ticketmasterResult.data.length;
     allEvents.push(...ticketmasterResult.data);
+    serviceStats['Ticketmaster'] = count;
+    console.log(`[Aggregator] ✅ Ticketmaster: ${count} events`);
+  } else {
+    console.log(`[Aggregator] ❌ Ticketmaster failed: ${ticketmasterResult.error}`);
+    serviceStats['Ticketmaster'] = 0;
   }
 
   if (musicbrainzResult.success && musicbrainzResult.data) {
+    const count = musicbrainzResult.data.length;
     allEvents.push(...musicbrainzResult.data);
+    serviceStats['MusicBrainz'] = count;
+    console.log(`[Aggregator] ✅ MusicBrainz: ${count} events`);
+  } else {
+    console.log(`[Aggregator] ❌ MusicBrainz failed: ${musicbrainzResult.error}`);
+    serviceStats['MusicBrainz'] = 0;
   }
 
   // Combine source links from Wikipedia and News
@@ -139,6 +164,9 @@ export async function aggregatePerformanceData(
 
   // Deduplicate events (by date, venue, and city)
   const uniqueEvents = deduplicateEvents(allEvents);
+
+  console.log(`[Aggregator] 📊 Total: ${allEvents.length} events, ${uniqueEvents.length} unique after deduplication`);
+  console.log(`[Aggregator] 📊 Breakdown:`, serviceStats);
 
   // Sort events by date (most recent first)
   uniqueEvents.sort((a, b) => {

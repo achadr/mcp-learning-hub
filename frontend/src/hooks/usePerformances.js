@@ -138,6 +138,15 @@ export const usePerformances = () => {
     setError(null);
   };
 
+  /**
+   * Retry last search
+   */
+  const retryLastSearch = () => {
+    if (results) {
+      searchPerformances(results.artist, results.location || '');
+    }
+  };
+
   return {
     // State
     results,
@@ -153,7 +162,8 @@ export const usePerformances = () => {
     searchPerformances,
     setSortOrder,
     setShowUpcoming,
-    clearResults
+    clearResults,
+    retryLastSearch
   };
 };
 

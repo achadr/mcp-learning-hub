@@ -225,7 +225,23 @@ export const prepareTopCitiesData = (performances, limit = 10) => {
   const cityCounts = {};
 
   performances.forEach(performance => {
-    if (!performance.city) return;
+    // Skip if no city or if it's "Unknown" or "City unknown" or empty
+    if (!performance.city ||
+        performance.city.toLowerCase() === 'unknown' ||
+        performance.city.toLowerCase() === 'city unknown' ||
+        performance.city.toLowerCase().includes('unknown') ||
+        performance.city.trim() === '') {
+      return;
+    }
+
+    // Also skip if country is unknown
+    if (performance.country &&
+        (performance.country.toLowerCase() === 'unknown' ||
+         performance.country.toLowerCase() === 'country unknown' ||
+         performance.country.toLowerCase().includes('unknown'))) {
+      return;
+    }
+
     const cityKey = `${performance.city}${performance.country ? ', ' + performance.country : ''}`;
     cityCounts[cityKey] = (cityCounts[cityKey] || 0) + 1;
   });
@@ -280,7 +296,14 @@ export const prepareGeographicData = (performances) => {
   const countryCounts = {};
 
   performances.forEach(performance => {
-    if (!performance.country) return;
+    // Skip if no country or if it's "Unknown" or "Country unknown" or empty
+    if (!performance.country ||
+        performance.country.toLowerCase() === 'unknown' ||
+        performance.country.toLowerCase() === 'country unknown' ||
+        performance.country.toLowerCase().includes('unknown') ||
+        performance.country.trim() === '') {
+      return;
+    }
     countryCounts[performance.country] = (countryCounts[performance.country] || 0) + 1;
   });
 

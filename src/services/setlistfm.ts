@@ -6,6 +6,7 @@
 import { config } from '../config.js';
 import type { PerformanceEvent, SearchParams, ServiceResponse } from '../types.js';
 import { getVenueCapacityWithFallback } from './venueCapacity.js';
+import { extractCountry } from '../utils/countryMapping.js';
 
 export async function searchSetlistFm(
   params: SearchParams
@@ -53,31 +54,76 @@ export async function searchSetlistFm(
     const artist = artists[0];
     const artistMbid = artist.mbid;
 
-    // Step 2: Get artist's setlists
+    // Step 2: Get artist's setlists (fetch multiple pages for more history)
     const setlistUrl = `${config.setlistfm.baseUrl}/search/setlists`;
-    const setlistParams = new URLSearchParams({
-      artistMbid: artistMbid,
-      p: '1',
-    });
+    const allSetlists: any[] = [];
+    // Fetch more pages when no country filter (to get global coverage)
+    const pagesToFetch = params.country ? 5 : 15; // 15 pages worldwide = 300 setlists for better coverage
 
-    // Add country filter if specified
-    if (params.country) {
-      setlistParams.append('countryCode', params.country.toUpperCase());
+    for (let page = 1; page <= pagesToFetch; page++) {
+      const setlistParams = new URLSearchParams({
+        artistMbid: artistMbid,
+        p: page.toString(),
+      });
+
+      // Add country filter if specified
+      if (params.country) {
+        setlistParams.append('countryCode', params.country.toUpperCase());
+      }
+
+      // Retry logic for intermittent failures
+      let retries = 2;
+      let success = false;
+      let pageSetlists: any[] = [];
+
+      while (retries > 0 && !success) {
+        try {
+          const setlistResponse = await fetch(`${setlistUrl}?${setlistParams}`, {
+            headers: {
+              'Accept': 'application/json',
+              'x-api-key': config.setlistfm.apiKey,
+            },
+          });
+
+          if (!setlistResponse.ok) {
+            // If we get an error on page > 1, just stop fetching more pages
+            if (page > 1 && retries === 1) {
+              console.warn(`[Setlist.fm] Page ${page} failed, stopping pagination`);
+              break;
+            }
+            throw new Error(`Setlist.fm setlist search error: ${setlistResponse.status}`);
+          }
+
+          const setlistData = await setlistResponse.json();
+          pageSetlists = setlistData.setlist || [];
+          success = true;
+        } catch (error) {
+          retries--;
+          if (retries > 0) {
+            console.warn(`[Setlist.fm] Page ${page} failed, retrying... (${retries} retries left)`);
+            await new Promise(resolve => setTimeout(resolve, 200)); // Wait before retry
+          } else if (page > 1) {
+            console.warn(`[Setlist.fm] Page ${page} failed after retries, stopping pagination`);
+            break;
+          } else {
+            throw error; // Throw on page 1 failure
+          }
+        }
+      }
+
+      // If no more results, stop fetching
+      if (!success || pageSetlists.length === 0) break;
+
+      allSetlists.push(...pageSetlists);
+      console.log(`[Setlist.fm] Page ${page}: ${pageSetlists.length} setlists (total: ${allSetlists.length})`);
+
+      // Add a small delay to avoid rate limiting
+      if (page < pagesToFetch) {
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
     }
 
-    const setlistResponse = await fetch(`${setlistUrl}?${setlistParams}`, {
-      headers: {
-        'Accept': 'application/json',
-        'x-api-key': config.setlistfm.apiKey,
-      },
-    });
-
-    if (!setlistResponse.ok) {
-      throw new Error(`Setlist.fm setlist search error: ${setlistResponse.status}`);
-    }
-
-    const setlistData = await setlistResponse.json();
-    const setlists = setlistData.setlist || [];
+    const setlists = allSetlists;
 
     // Transform to our format
     const performanceEvents: PerformanceEvent[] = setlists.map((setlist: any) => {
@@ -85,7 +131,12 @@ export async function searchSetlistFm(
       const city = venue?.city;
       const venueName = venue?.name || 'Venue unknown';
       const cityName = city?.name || 'City unknown';
-      const countryName = city?.country?.name || 'Country unknown';
+
+      // Try to extract country with fallback to country code
+      const countryName = extractCountry(
+        city?.country?.name,
+        city?.country?.code
+      ) || 'Country unknown';
 
       // Extract songs from setlist
       const songs: string[] = [];

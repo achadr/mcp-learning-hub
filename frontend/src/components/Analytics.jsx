@@ -40,6 +40,21 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
+// Custom tooltip for pie chart
+const PieTooltip = ({ active, payload }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0];
+    return (
+      <div className="bg-gray-900/95 backdrop-blur-lg border border-white/20 rounded-lg p-3 shadow-xl">
+        <p className="text-white font-medium">
+          {data.name}: <span className="font-bold" style={{ color: data.payload.fill }}>{data.value}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 // Color palette
 const COLORS = [
   '#a855f7', // purple-500
@@ -56,7 +71,11 @@ export function Analytics({ performances }) {
   const timelineData = useMemo(() => prepareTimelineChartData(performances), [performances]);
   const topCitiesData = useMemo(() => prepareTopCitiesData(performances, 10), [performances]);
   const capacityData = useMemo(() => prepareCapacityTrendsData(performances), [performances]);
-  const geographicData = useMemo(() => prepareGeographicData(performances), [performances]);
+  const geographicData = useMemo(() => {
+    const data = prepareGeographicData(performances);
+    // Limit to top 6 countries for readability
+    return data.slice(0, 6);
+  }, [performances]);
 
   if (performances.length === 0) {
     return (
@@ -188,7 +207,7 @@ export function Analytics({ performances }) {
             <Globe className="w-5 h-5 text-emerald-400" />
             <h3 className="text-white text-lg font-bold">Geographic Distribution</h3>
           </div>
-          <p className="text-white/60 text-sm mb-6">Performance distribution by country</p>
+          <p className="text-white/60 text-sm mb-6">Top countries by performance count</p>
 
           {geographicData.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
@@ -198,20 +217,26 @@ export function Analytics({ performances }) {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ country, percent }) => `${country} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
+                  outerRadius={70}
                   fill="#8884d8"
                   dataKey="count"
+                  nameKey="country"
                 >
                   {geographicData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<PieTooltip />} />
+                <Legend
+                  wrapperStyle={{ color: 'white', fontSize: '12px' }}
+                  formatter={(value, entry) => `${entry.payload.country}: ${entry.payload.count}`}
+                />
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-white/40 text-center py-12">No geographic data available</p>
+            <p className="text-white/40 text-center py-12">
+              No country data available. Performances may be missing location information.
+            </p>
           )}
         </Card>
       </div>

@@ -6,6 +6,7 @@
 import { config } from '../config.js';
 import type { PerformanceEvent, SearchParams, ServiceResponse } from '../types.js';
 import { getVenueCapacityWithFallback } from './venueCapacity.js';
+import { extractCountry } from '../utils/countryMapping.js';
 
 export async function searchTicketmaster(
   params: SearchParams
@@ -47,7 +48,12 @@ export async function searchTicketmaster(
       const date = event.dates?.start?.localDate || 'Date unknown';
       const venueName = venue?.name || 'Venue unknown';
       const cityName = venue?.city?.name || 'City unknown';
-      const countryName = venue?.country?.name || 'Country unknown';
+
+      // Try to extract country with fallback to country code
+      const countryName = extractCountry(
+        venue?.country?.name,
+        venue?.country?.countryCode
+      ) || 'Country unknown';
 
       // Get venue capacity
       const capacity = getVenueCapacityWithFallback(venueName, cityName, countryName);
