@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { toast } from 'sonner';
 import api from '../services/api';
 import {
   transformEvents,
@@ -95,14 +96,34 @@ export const usePerformances = () => {
     setError(null);
     setResults(null);
 
+    // Show loading toast
+    const toastId = toast.loading(
+      `Searching for ${artist}${country ? ` in ${country}` : ''}...`
+    );
+
     try {
       const data = await api.getPerformances(artist, country);
       setResults(data);
+
+      // Show success or no results toast
+      if (data.performed) {
+        const eventCount = data.events?.length || 0;
+        toast.success(
+          `Found ${eventCount} performance${eventCount !== 1 ? 's' : ''} for ${artist}!`,
+          { id: toastId }
+        );
+      } else {
+        toast.info(
+          `No performances found for ${artist}${country ? ` in ${country}` : ''}`,
+          { id: toastId }
+        );
+      }
     } catch (err) {
-      setError(
-        err.response?.data?.error ||
-        'Failed to fetch data. Make sure the backend server is running.'
-      );
+      const errorMessage = err.response?.data?.error ||
+        'Failed to fetch data. Make sure the backend server is running.';
+
+      setError(errorMessage);
+      toast.error(errorMessage, { id: toastId });
       console.error('Error fetching data:', err);
     } finally {
       setLoading(false);

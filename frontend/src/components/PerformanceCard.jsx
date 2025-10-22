@@ -1,4 +1,5 @@
 import { Calendar, MapPin, Users, List } from "lucide-react";
+import { toast } from "sonner";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -93,6 +94,7 @@ export function PerformanceCard({
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => toast.info(`Viewing setlist with ${setlist.length} songs`)}
                   className={`w-full ${
                     isFuture
                       ? 'bg-cyan-500/20 border-cyan-400/40 text-cyan-100 hover:bg-cyan-500/30 hover:text-cyan-50'
@@ -142,6 +144,7 @@ export function PerformanceCard({
               href={setlistUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => toast.info('Opening external link...')}
               className="inline-block text-purple-400 hover:text-purple-300 text-sm transition-colors"
             >
               View Details →

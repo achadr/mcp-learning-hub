@@ -1,4 +1,5 @@
 import { Music } from "lucide-react";
+import { Toaster } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { usePerformances } from "./hooks/usePerformances";
 import { SearchForm } from "./components/SearchForm";
@@ -13,6 +14,7 @@ import { PerformanceTimeline } from "./components/PerformanceTimeline";
 import { SourcesList } from "./components/SourcesList";
 import { FilterControls } from "./components/FilterControls";
 import { MapView } from "./components/MapView";
+import { Analytics } from "./components/Analytics";
 
 export default function App() {
   const {
@@ -118,6 +120,9 @@ export default function App() {
                   <TabsTrigger value="map" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
                     Map View
                   </TabsTrigger>
+                  <TabsTrigger value="analytics" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
+                    Analytics
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="grid" className="space-y-6">
@@ -131,6 +136,10 @@ export default function App() {
                 <TabsContent value="map" className="space-y-6">
                   <MapView performances={filteredPerformances} />
                 </TabsContent>
+
+                <TabsContent value="analytics" className="space-y-6">
+                  <Analytics performances={filteredPerformances} />
+                </TabsContent>
               </Tabs>
 
               {/* Sources Section */}
@@ -139,6 +148,22 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {/* Toast Notifications */}
+      <Toaster
+        position="top-right"
+        theme="dark"
+        richColors
+        closeButton
+        toastOptions={{
+          style: {
+            background: 'rgba(17, 24, 39, 0.95)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            color: 'white',
+          },
+        }}
+      />
     </div>
   );
 }

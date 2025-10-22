@@ -186,3 +186,106 @@ export const filterPastOnly = (performances) => {
     return eventDate && eventDate < today;
   });
 };
+
+/**
+ * Prepare data for performance timeline chart
+ * Groups performances by month/year
+ * @param {Array} performances - Array of performance objects
+ * @returns {Array} Chart data with date and count
+ */
+export const prepareTimelineChartData = (performances) => {
+  const monthCounts = {};
+
+  performances.forEach(performance => {
+    const eventDate = parseDate(performance.date);
+    if (!eventDate) return;
+
+    // Format as "MMM YYYY" (e.g., "Jan 2023")
+    const monthKey = eventDate.toLocaleDateString('en-US', {
+      month: 'short',
+      year: 'numeric'
+    });
+
+    monthCounts[monthKey] = (monthCounts[monthKey] || 0) + 1;
+  });
+
+  // Convert to array and sort by date
+  return Object.entries(monthCounts)
+    .map(([month, count]) => ({ month, count }))
+    .sort((a, b) => new Date(a.month) - new Date(b.month));
+};
+
+/**
+ * Prepare data for top cities chart
+ * @param {Array} performances - Array of performance objects
+ * @param {number} limit - Max number of cities to show
+ * @returns {Array} Chart data with city and count
+ */
+export const prepareTopCitiesData = (performances, limit = 10) => {
+  const cityCounts = {};
+
+  performances.forEach(performance => {
+    if (!performance.city) return;
+    const cityKey = `${performance.city}${performance.country ? ', ' + performance.country : ''}`;
+    cityCounts[cityKey] = (cityCounts[cityKey] || 0) + 1;
+  });
+
+  // Convert to array, sort by count descending, and take top N
+  return Object.entries(cityCounts)
+    .map(([city, count]) => ({ city, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+};
+
+/**
+ * Prepare data for capacity trends chart
+ * @param {Array} performances - Array of performance objects
+ * @returns {Array} Chart data with date and average capacity
+ */
+export const prepareCapacityTrendsData = (performances) => {
+  const monthData = {};
+
+  performances.forEach(performance => {
+    const eventDate = parseDate(performance.date);
+    if (!eventDate || !performance.capacity || performance.capacity === 0) return;
+
+    const monthKey = eventDate.toLocaleDateString('en-US', {
+      month: 'short',
+      year: 'numeric'
+    });
+
+    if (!monthData[monthKey]) {
+      monthData[monthKey] = { total: 0, count: 0 };
+    }
+
+    monthData[monthKey].total += performance.capacity;
+    monthData[monthKey].count += 1;
+  });
+
+  // Calculate average capacity per month and sort
+  return Object.entries(monthData)
+    .map(([month, data]) => ({
+      month,
+      avgCapacity: Math.round(data.total / data.count)
+    }))
+    .sort((a, b) => new Date(a.month) - new Date(b.month));
+};
+
+/**
+ * Prepare data for geographic distribution chart
+ * @param {Array} performances - Array of performance objects
+ * @returns {Array} Chart data with country and count
+ */
+export const prepareGeographicData = (performances) => {
+  const countryCounts = {};
+
+  performances.forEach(performance => {
+    if (!performance.country) return;
+    countryCounts[performance.country] = (countryCounts[performance.country] || 0) + 1;
+  });
+
+  // Convert to array and sort by count
+  return Object.entries(countryCounts)
+    .map(([country, count]) => ({ country, count }))
+    .sort((a, b) => b.count - a.count);
+};
