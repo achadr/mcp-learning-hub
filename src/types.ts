@@ -22,6 +22,10 @@ export interface PerformanceResult {
   sources: SourceLink[];
   message?: string;
   artistImage?: string;
+  /** Total available performances according to APIs (may be more than what we fetched) */
+  totalAvailable?: number;
+  /** Whether this result came from cache */
+  cached?: boolean;
 }
 
 export interface SourceLink {
@@ -45,4 +49,6 @@ export interface ServiceResponse<T> {
   data?: T;
   error?: string;
   source: string;
+  /** Total count reported by the API (if available) */
+  totalAvailable?: number;
 }

@@ -7,6 +7,7 @@ import { config } from '../config.js';
 import type { PerformanceEvent, SearchParams, ServiceResponse } from '../types.js';
 import { getVenueCapacityWithFallback } from './venueCapacity.js';
 import { extractCountry } from '../utils/countryMapping.js';
+import { fetchPagesInParallel } from '../utils/parallelPagination.js';
 
 export async function searchSetlistFm(
   params: SearchParams
@@ -56,11 +57,14 @@ export async function searchSetlistFm(
 
     // Step 2: Get artist's setlists (fetch multiple pages for more history)
     const setlistUrl = `${config.setlistfm.baseUrl}/search/setlists`;
-    const allSetlists: any[] = [];
     // Fetch more pages when no country filter (to get global coverage)
-    const pagesToFetch = params.country ? 5 : 15; // 15 pages worldwide = 300 setlists for better coverage
+    const pagesToFetch = params.country ? 5 : 30; // 30 pages worldwide = 600 setlists for better analytics coverage
 
-    for (let page = 1; page <= pagesToFetch; page++) {
+    // Variable to capture total from first page
+    let totalAvailable: number | undefined;
+
+    // Create page fetcher function for parallel pagination
+    const fetchSetlistPage = async (page: number): Promise<any[] | null> => {
       const setlistParams = new URLSearchParams({
         artistMbid: artistMbid,
         p: page.toString(),
@@ -71,59 +75,49 @@ export async function searchSetlistFm(
         setlistParams.append('countryCode', params.country.toUpperCase());
       }
 
-      // Retry logic for intermittent failures
-      let retries = 2;
-      let success = false;
-      let pageSetlists: any[] = [];
+      try {
+        const setlistResponse = await fetch(`${setlistUrl}?${setlistParams}`, {
+          headers: {
+            'Accept': 'application/json',
+            'x-api-key': config.setlistfm.apiKey,
+          },
+        });
 
-      while (retries > 0 && !success) {
-        try {
-          const setlistResponse = await fetch(`${setlistUrl}?${setlistParams}`, {
-            headers: {
-              'Accept': 'application/json',
-              'x-api-key': config.setlistfm.apiKey,
-            },
-          });
-
-          if (!setlistResponse.ok) {
-            // If we get an error on page > 1, just stop fetching more pages
-            if (page > 1 && retries === 1) {
-              console.warn(`[Setlist.fm] Page ${page} failed, stopping pagination`);
-              break;
-            }
+        if (!setlistResponse.ok) {
+          // On page 1, throw error; on other pages, return null to stop
+          if (page === 1) {
             throw new Error(`Setlist.fm setlist search error: ${setlistResponse.status}`);
           }
-
-          const setlistData = await setlistResponse.json();
-          pageSetlists = setlistData.setlist || [];
-          success = true;
-        } catch (error) {
-          retries--;
-          if (retries > 0) {
-            console.warn(`[Setlist.fm] Page ${page} failed, retrying... (${retries} retries left)`);
-            await new Promise(resolve => setTimeout(resolve, 200)); // Wait before retry
-          } else if (page > 1) {
-            console.warn(`[Setlist.fm] Page ${page} failed after retries, stopping pagination`);
-            break;
-          } else {
-            throw error; // Throw on page 1 failure
-          }
+          return null;
         }
+
+        const setlistData = await setlistResponse.json();
+
+        // Capture total from first page
+        if (page === 1 && setlistData.total !== undefined) {
+          totalAvailable = setlistData.total;
+          console.log(`[Setlist.fm] Total available: ${totalAvailable}`);
+        }
+
+        return setlistData.setlist || [];
+      } catch (error) {
+        // On page 1, throw error; on other pages, return null to stop
+        if (page === 1) {
+          throw error;
+        }
+        return null;
       }
+    };
 
-      // If no more results, stop fetching
-      if (!success || pageSetlists.length === 0) break;
-
-      allSetlists.push(...pageSetlists);
-      console.log(`[Setlist.fm] Page ${page}: ${pageSetlists.length} setlists (total: ${allSetlists.length})`);
-
-      // Add a small delay to avoid rate limiting
-      if (page < pagesToFetch) {
-        await new Promise(resolve => setTimeout(resolve, 150));
-      }
-    }
-
-    const setlists = allSetlists;
+    // Fetch pages in parallel (batches of 3)
+    const setlists = await fetchPagesInParallel(fetchSetlistPage, {
+      totalPages: pagesToFetch,
+      batchSize: 3,
+      batchDelay: 150,
+      retries: 2,
+      retryDelay: 200,
+      serviceName: 'Setlist.fm',
+    });
 
     // Transform to our format
     const performanceEvents: PerformanceEvent[] = setlists.map((setlist: any) => {
@@ -177,6 +171,7 @@ export async function searchSetlistFm(
       success: true,
       data: performanceEvents,
       source: 'setlistfm',
+      totalAvailable,
     };
   } catch (error) {
     return {

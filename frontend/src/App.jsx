@@ -142,6 +142,9 @@ export default function App() {
                 artist={results.artist}
                 location={results.location || 'the specified location'}
                 message={results.message}
+                totalAvailable={results.totalAvailable}
+                cached={results.cached}
+                loadedCount={results.events?.length || 0}
               />
 
               {/* Stats Overview */}
@@ -201,7 +204,10 @@ export default function App() {
                 </TabsContent>
 
                 <TabsContent value="analytics" className="space-y-6">
-                  <Analytics performances={filteredPerformances} />
+                  <Analytics
+                    performances={filteredPerformances}
+                    totalAvailable={results.totalAvailable}
+                  />
                 </TabsContent>
               </Tabs>
 

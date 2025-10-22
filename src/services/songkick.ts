@@ -7,6 +7,7 @@ import { config } from '../config.js';
 import type { PerformanceEvent, SearchParams, ServiceResponse } from '../types.js';
 import { getVenueCapacityWithFallback } from './venueCapacity.js';
 import { extractCountry } from '../utils/countryMapping.js';
+import { fetchPagesInParallel } from '../utils/parallelPagination.js';
 
 export async function searchSongkick(
   params: SearchParams
@@ -62,47 +63,37 @@ export async function searchSongkick(
 
     // Fetch past events (gigography) - fetch multiple pages
     // Fetch more pages when no country filter (to get global coverage)
-    const pagesToFetch = params.country ? 3 : 8; // 8 pages worldwide for better coverage
-    for (let page = 1; page <= pagesToFetch; page++) {
+    const pagesToFetch = params.country ? 3 : 15; // 15 pages worldwide for better analytics coverage
+
+    // Create page fetcher function for parallel pagination
+    const fetchGigographyPage = async (page: number): Promise<any[] | null> => {
       const gigographyUrl = `${config.songkick.baseUrl}/artists/${artistId}/gigography.json?apikey=${config.songkick.apiKey}&page=${page}`;
 
-      // Retry logic for intermittent failures
-      let retries = 2;
-      let success = false;
-      let pastEvents: any[] = [];
-
-      while (retries > 0 && !success) {
-        try {
-          const gigographyResponse = await fetch(gigographyUrl);
-          if (gigographyResponse.ok) {
-            const gigographyData = await gigographyResponse.json();
-            pastEvents = gigographyData.resultsPage?.results?.event || [];
-            success = true;
-          } else {
-            throw new Error(`Songkick API error: ${gigographyResponse.status}`);
-          }
-        } catch (error) {
-          retries--;
-          if (retries > 0) {
-            console.warn(`[Songkick] Page ${page} failed, retrying... (${retries} retries left)`);
-            await new Promise(resolve => setTimeout(resolve, 200));
-          } else {
-            console.warn(`[Songkick] Page ${page} failed after retries, stopping pagination`);
-            break;
-          }
+      try {
+        const gigographyResponse = await fetch(gigographyUrl);
+        if (gigographyResponse.ok) {
+          const gigographyData = await gigographyResponse.json();
+          return gigographyData.resultsPage?.results?.event || [];
+        } else {
+          throw new Error(`Songkick API error: ${gigographyResponse.status}`);
         }
+      } catch (error) {
+        // Return null to signal failure
+        return null;
       }
+    };
 
-      if (!success || pastEvents.length === 0) break;
+    // Fetch gigography pages in parallel (batches of 3)
+    const pastEvents = await fetchPagesInParallel(fetchGigographyPage, {
+      totalPages: pagesToFetch,
+      batchSize: 3,
+      batchDelay: 150,
+      retries: 2,
+      retryDelay: 200,
+      serviceName: 'Songkick',
+    });
 
-      allEvents.push(...pastEvents);
-      console.log(`[Songkick] Page ${page}: ${pastEvents.length} events (total: ${allEvents.length})`);
-
-      // Small delay to avoid rate limiting
-      if (page < pagesToFetch) {
-        await new Promise(resolve => setTimeout(resolve, 150));
-      }
-    }
+    allEvents.push(...pastEvents);
 
     const events = allEvents;
 

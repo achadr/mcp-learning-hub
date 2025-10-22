@@ -67,7 +67,7 @@ const COLORS = [
   '#f97316', // orange-500
 ];
 
-export function Analytics({ performances }) {
+export function Analytics({ performances, totalAvailable }) {
   const timelineData = useMemo(() => prepareTimelineChartData(performances), [performances]);
   const topCitiesData = useMemo(() => prepareTopCitiesData(performances, 10), [performances]);
   const capacityData = useMemo(() => prepareCapacityTrendsData(performances), [performances]);
@@ -76,6 +76,9 @@ export function Analytics({ performances }) {
     // Limit to top 6 countries for readability
     return data.slice(0, 6);
   }, [performances]);
+
+  const loadedCount = performances.length;
+  const showDisclaimer = totalAvailable && totalAvailable > loadedCount;
 
   if (performances.length === 0) {
     return (
@@ -87,6 +90,24 @@ export function Analytics({ performances }) {
 
   return (
     <div className="space-y-6">
+      {/* Disclaimer if showing partial data */}
+      {showDisclaimer && (
+        <div className="bg-blue-500/10 border border-blue-400/30 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-blue-300 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <h4 className="text-blue-200 font-medium text-sm">Analytics Based on Sample Data</h4>
+              <p className="text-blue-300/80 text-sm mt-1">
+                Showing analytics for <span className="font-semibold">{loadedCount}</span> performances out of <span className="font-semibold">~{totalAvailable}</span> total available.
+                Charts represent trends from loaded data.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Performance Timeline */}
       <Card className="bg-white/10 backdrop-blur-lg border-white/20 p-6">
         <div className="flex items-center gap-2 mb-4">

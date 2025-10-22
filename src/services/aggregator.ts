@@ -11,6 +11,13 @@ import { searchMusicBrainz } from './musicbrainz.js';
 import { getArtistImage } from './artistImageProvider.js';
 import { config } from '../config.js';
 import type { PerformanceEvent, PerformanceResult, SearchParams, SourceLink } from '../types.js';
+import { InMemoryCache, generateCacheKey } from '../utils/cache.js';
+
+// Create cache instance with 1 hour TTL
+const performanceCache = new InMemoryCache<PerformanceResult>(60 * 60 * 1000);
+
+// Start automatic cleanup every 5 minutes
+performanceCache.startAutoCleanup();
 
 // Country name to ISO code mapping
 const COUNTRY_TO_ISO: Record<string, string> = {
@@ -72,6 +79,17 @@ const COUNTRY_TO_ISO: Record<string, string> = {
 export async function aggregatePerformanceData(
   params: SearchParams
 ): Promise<PerformanceResult> {
+  // Generate cache key and check cache first
+  const cacheKey = generateCacheKey(params.artist, params.country);
+  const cachedResult = performanceCache.get(cacheKey);
+
+  if (cachedResult) {
+    console.log(`[Aggregator] 🎯 Returning cached result for: ${params.artist}`);
+    return { ...cachedResult, cached: true };
+  }
+
+  console.log(`[Aggregator] 🔍 Cache miss, fetching fresh data for: ${params.artist}`);
+
   // Normalize country name to ISO code for better API compatibility
   const originalCountry = params.country;
   let normalizedCountry = params.country;
@@ -178,6 +196,21 @@ export async function aggregatePerformanceData(
   // Determine if artist performed in the location
   const performed = uniqueEvents.length > 0;
 
+  // Calculate total available from APIs (sum of all API totals)
+  let totalAvailable: number | undefined;
+  const apiTotals: number[] = [];
+
+  if (setlistfmResult.totalAvailable) apiTotals.push(setlistfmResult.totalAvailable);
+  if (songkickResult.totalAvailable) apiTotals.push(songkickResult.totalAvailable);
+  if (ticketmasterResult.totalAvailable) apiTotals.push(ticketmasterResult.totalAvailable);
+  if (musicbrainzResult.totalAvailable) apiTotals.push(musicbrainzResult.totalAvailable);
+
+  // Use the highest total as best estimate (APIs may overlap)
+  if (apiTotals.length > 0) {
+    totalAvailable = Math.max(...apiTotals);
+    console.log(`[Aggregator] 📊 Total available (max across APIs): ${totalAvailable}`);
+  }
+
   // Build result message
   let message: string | undefined;
   if (!performed) {
@@ -194,7 +227,8 @@ export async function aggregatePerformanceData(
     }
   }
 
-  return {
+  // Build result object
+  const result: PerformanceResult = {
     artist: params.artist,
     location: originalCountry || 'worldwide',
     performed,
@@ -202,7 +236,14 @@ export async function aggregatePerformanceData(
     sources: allSources.slice(0, 10), // Limit to top 10 sources
     message,
     artistImage: artistImage || undefined,
+    totalAvailable,
+    cached: false,
   };
+
+  // Store in cache before returning
+  performanceCache.set(cacheKey, result);
+
+  return result;
 }
 
 /**
